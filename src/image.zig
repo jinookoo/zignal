@@ -292,17 +292,18 @@ pub fn Image(comptime T: type) type {
                 }
             }
             const boxW = boxR - boxL + 1;
+            const start = (boxT - radius) * self.cols + boxL - radius;
+            const end = (boxB + radius) * self.cols + boxR + radius;
 
             switch (@typeInfo(T)) {
                 .int, .float => {
                     var integral: Image(f32) = undefined;
                     try self.integralImage(allocator, &integral);
                     defer integral.deinit(allocator);
-                    const size = self.rows * self.cols;
-                    var pos: usize = (boxT - radius) * self.cols + boxL - radius;
-                    var rem: usize = size;
+                    var pos: usize = start;
+                    var rem: usize = end;
                     const simd_len = std.simd.suggestVectorLength(T) orelse 1;
-                    while (pos < size) {
+                    while (pos < end) {
                         const r = pos / self.cols;
                         const c = pos % self.cols;
                         if (r >= boxB + radius) {
@@ -362,10 +363,9 @@ pub fn Image(comptime T: type) type {
                     var integral: Image([Self.channels()]f32) = undefined;
                     try self.integralImage(allocator, &integral);
                     defer integral.deinit(allocator);
-                    const size = self.rows * self.cols;
-                    var pos: usize = (boxT - radius) * self.cols + boxL - radius;
-                    var rem: usize = size;
-                    while (pos < size) {
+                    var pos: usize = start;
+                    var rem: usize = end;
+                    while (pos < end) {
                         const r = pos / self.cols;
                         const c = pos % self.cols;
                         if (r >= boxB + radius) {
