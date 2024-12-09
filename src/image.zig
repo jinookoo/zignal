@@ -276,18 +276,43 @@ pub fn Image(comptime T: type) type {
                 return;
             }
 
+            var boxL: usize = self.cols;
+            var boxT: usize = self.rows;
+            var boxR: usize = 0;
+            var boxB: usize = 0;
+            for (0..self.rows) |r| {
+                for (0..self.cols) |c| {
+                    const pos = r * self.cols + c;
+                    if (self.data[pos] != 0) {
+                        boxL = @min(boxL, c);
+                        boxT = @min(boxT, r);
+                        boxR = @max(boxR, c);
+                        boxB = @max(boxB, r);
+                    }
+                }
+            }
+            const boxW = boxR - boxL + 1;
+
             switch (@typeInfo(T)) {
                 .int, .float => {
                     var integral: Image(f32) = undefined;
                     try self.integralImage(allocator, &integral);
                     defer integral.deinit(allocator);
                     const size = self.rows * self.cols;
-                    var pos: usize = 0;
+                    var pos: usize = (boxT - radius) * self.cols + boxL - radius;
                     var rem: usize = size;
                     const simd_len = std.simd.suggestVectorLength(T) orelse 1;
                     while (pos < size) {
                         const r = pos / self.cols;
                         const c = pos % self.cols;
+                        if (r >= boxB + radius) {
+                            break;
+                        } else if (c >= boxR + radius) {
+                            const o = self.cols - (boxW + 2 * radius);
+                            pos += o;
+                            rem -= o;
+                            continue;
+                        }
                         const r1 = r -| radius;
                         const r2 = @min(r + radius, self.rows - 1);
                         const r1_offset = r1 * self.cols;
@@ -338,11 +363,20 @@ pub fn Image(comptime T: type) type {
                     try self.integralImage(allocator, &integral);
                     defer integral.deinit(allocator);
                     const size = self.rows * self.cols;
-                    var pos: usize = 0;
+                    var pos: usize = (boxT - radius) * self.cols + boxL - radius;
                     var rem: usize = size;
                     while (pos < size) {
                         const r = pos / self.cols;
                         const c = pos % self.cols;
+                        if (r >= boxB + radius) {
+                            break;
+                        } else if (c >= boxR + radius) {
+                            const o = self.cols - (boxW + 2 * radius);
+                            pos += o;
+                            rem -= o;
+                            continue;
+                        }
+
                         const r1 = r -| radius;
                         const c1 = c -| radius;
                         const r2 = @min(r + radius, self.rows - 1);
